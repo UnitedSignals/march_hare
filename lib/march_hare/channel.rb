@@ -991,6 +991,8 @@ module MarchHare
 
     def stacktrace(e)
       if defined?(JRUBY_VERSION) && e.respond_to?(:cause) && e.cause
+        require 'java'
+
         sw = Java::JavaIo::StringWriter.new
         pw = Java::JavaIo::PrintWriter.new(sw)
         e.cause.printStackTrace(pw)
