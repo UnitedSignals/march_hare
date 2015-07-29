@@ -120,16 +120,16 @@ module MarchHare
     # @private
     def initialize(session, delegate)
       @connection = session
-      @delegate   = delegate
+      @delegate = delegate
 
-      @exchanges      = JavaConcurrent::ConcurrentHashMap.new
-      @queues         = JavaConcurrent::ConcurrentHashMap.new
+      @exchanges = JavaConcurrent::ConcurrentHashMap.new
+      @queues = JavaConcurrent::ConcurrentHashMap.new
       # we keep track of consumers in part to gracefully shut down their
       # executors when the channel is closed. This frees library users
       # from having to worry about this. MK.
-      @consumers      = JavaConcurrent::ConcurrentHashMap.new
+      @consumers = JavaConcurrent::ConcurrentHashMap.new
       @shutdown_hooks = Array.new
-      @confirm_hooks  = Array.new
+      @confirm_hooks = Array.new
       @recoveries_counter = JavaConcurrent::AtomicInteger.new(0)
 
       on_shutdown do |ch, cause|
@@ -141,6 +141,7 @@ module MarchHare
     def session
       @connection
     end
+
     alias client session
     alias connection session
 
@@ -148,6 +149,7 @@ module MarchHare
     def channel_number
       @delegate.channel_number
     end
+
     alias id channel_number
     alias number channel_number
 
@@ -657,6 +659,7 @@ module MarchHare
         basic_ack(delivery_tag.to_i, multiple)
       end
     end
+
     alias acknowledge ack
 
     # Rejects a message. A rejected message can be requeued or
@@ -798,6 +801,7 @@ module MarchHare
     def using_publisher_confirms?
       !!@confirm_mode
     end
+
     alias uses_publisher_confirms? using_publisher_confirms?
 
     # Waits until all outstanding publisher confirms arrive.
@@ -834,6 +838,7 @@ module MarchHare
     def using_tx?
       !!@tx_mode
     end
+
     alias uses_tx? using_tx?
 
     # Commits a transaction
@@ -974,31 +979,35 @@ module MarchHare
     # @private
     def guarding_against_stale_delivery_tags(tag, &block)
       case tag
-      # if a fixnum was passed, execute unconditionally. MK.
-      when Fixnum then
-        block.call
+        # if a fixnum was passed, execute unconditionally. MK.
+        when Fixnum then
+          block.call
         # versioned delivery tags should be checked to avoid
         # sending out stale (invalid) tags after channel was reopened
         # during network failure recovery. MK.
-      when VersionedDeliveryTag then
-        if !tag.stale?(@recoveries_counter.get)
-          block.call
-        end
+        when VersionedDeliveryTag then
+          if !tag.stale?(@recoveries_counter.get)
+            block.call
+          end
       end
     end
 
     private
 
     def stacktrace(e)
-      if defined?(JRUBY_VERSION) && e.respond_to?(:cause) && e.cause
-        require 'java'
+      begin
+        if defined?(JRUBY_VERSION) && e.respond_to?(:cause) && e.cause
+          require 'java'
 
-        sw = Java::JavaIo::StringWriter.new
-        pw = Java::JavaIo::PrintWriter.new(sw)
-        e.cause.printStackTrace(pw)
-        "#{pretty_ruby_exception(e)}\nCaused by: #{sw.to_s}"
-      else
-        pretty_ruby_exception(e)
+          sw = Java::JavaIo::StringWriter.new
+          pw = Java::JavaIo::PrintWriter.new(sw)
+          e.cause.printStackTrace(pw)
+          "#{pretty_ruby_exception(e)}\nCaused by: #{sw.to_s}"
+        else
+          pretty_ruby_exception(e)
+        end
+      rescue Exception => e2
+        "Double error: #{e2.to_s}"
       end
     end
 
