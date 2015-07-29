@@ -250,7 +250,7 @@ module MarchHare
           x.recover_from_network_failure
         rescue Exception => e
           # TODO: logger
-          $stderr.puts "Caught exception when recovering exchange #{x.name}"
+          $stderr.puts "Caught exception when recovering exchange #{x.name}: #{stacktrace(e)}"
         end
       end
     end
@@ -263,7 +263,7 @@ module MarchHare
           q.recover_from_network_failure
         rescue Exception => e
           # TODO: logger
-          $stderr.puts "Caught exception when recovering queue #{q.name}"
+          $stderr.puts "Caught exception when recovering queue #{q.name}: #{stacktrace(e)}"
         end
       end
     end
@@ -277,7 +277,7 @@ module MarchHare
           c.recover_from_network_failure
         rescue Exception => e
           # TODO: logger
-          $stderr.puts "Caught exception when recovering consumer #{c.consumer_tag}"
+          $stderr.puts "Caught exception when recovering consumer #{c.consumer_tag}: #{stacktrace(e)}"
         end
       end
     end
@@ -985,6 +985,23 @@ module MarchHare
           block.call
         end
       end
+    end
+
+    private
+
+    def stacktrace(e)
+      if defined?(JRUBY_VERSION) && e.respond_to?(:cause) && e.cause
+        sw = Java::JavaIo::StringWriter.new
+        pw = Java::JavaIo::PrintWriter.new(sw)
+        e.cause.printStackTrace(pw)
+        "#{pretty_ruby_exception(e)}\nCaused by: #{sw.to_s}"
+      else
+        pretty_ruby_exception(e)
+      end
+    end
+
+    def pretty_ruby_exception(e)
+      "#{e.inspect}\n#{e.backtrace.map { |line| "\t#{line}" }.join("\n")}"
     end
   end
 end
